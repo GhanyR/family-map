@@ -25,7 +25,7 @@
   const guide=Object.fromEntries(window.COUNTRIES.map(c=>[c.id,c]));
   const img={id:'jakarta',my:'kuala-lumpur',tr:'turkiye',dz:'algeria',ma:'fez',fr:'france'};
   const asset=path=>window.ATLAS_ASSETS?.[path]||path;
-  const groups=['Overview','Healthcare','Children & schools','Costs & work','Safety & environment','Daily infrastructure','Faith & community'];
+  const groups=['Overview','Living costs','Healthcare','Children & schools','Safety & environment','Daily infrastructure','Faith & community'];
   const overview=['share','prices','uhc','oop','schoolyears','dpt','homicide'];
   const names={people:'Muslim population',share:'Muslim share',prices:'Household price level',uhc:'Health service coverage',dpt:'DPT vaccination',teachers:'Pupils per teacher',water:'Safe drinking water',jobs:'Unemployment'};
   const placeName=(c)=>escape(c.name);
@@ -76,18 +76,20 @@
       const m=measures[key];
       return '<section class="measure-row"><div class="measure-label"><h3>'+escape(m.name)+'</h3><span>'+escape(m.unit)+'</span><details><summary>Definition &amp; source</summary><p>'+escape(m.description)+'</p><a class="credit-link" target="_blank" rel="noopener" href="'+escape(m.url)+'">'+escape(m.source)+'</a></details></div><div class="value-grid" style="--n:'+ids.length+'">'+ids.map(id=>{
         const c=byId[id],r=c.d[key];
+        const localDiet=key==='diet' && r && window.CITY_PRICES[id]?.dietLocal;
+        const localPrice=localDiet?'<small>'+escape(localDiet[1])+' '+localDiet[0].toLocaleString('en',{maximumFractionDigits:2})+' / day</small>':'';
         let graph='';
         if(r?.[0]!=null&&(m.unit==='%'||key==='uhc'||key==='prices')){
           graph='<span class="mini-track" aria-hidden="true"><i style="--bar:'+Math.max(0,Math.min(r[0],100))+'%"></i></span>';
         }
-        return '<div class="measure-cell"><span class="sr">'+placeName(c)+'. </span><b>'+escape(format(c,key,true))+'</b>'+(r?'<small>'+r[1]+'</small>':'<small>Unavailable</small>')+graph+'</div>';
+        return '<div class="measure-cell"><span class="sr">'+placeName(c)+'. </span><b>'+escape(format(c,key,true))+'</b>'+(r?'<small>'+r[1]+'</small>':'<small>Unavailable</small>')+localPrice+graph+'</div>';
       }).join('')+'</div></section>';
     }).join('');
   }
   const prompts={
     Healthcare:'Ask the local health insurer when a newly arrived child is eligible, how to register with a paediatrician, and what a prescription or emergency visit costs.',
     'Children & schools':'Ask the school district about residence documents, teaching language, fees, catchment boundaries and places for your child’s age.',
-    'Costs & work':'Price a real rental, childcare place and grocery basket near work. Check which family members can work under the residence permit.',
+    'Living costs':'For a closer estimate, check rent near your school or workplace and ask childcare providers about vacancies and fees.',
     'Safety & environment':'Look up neighbourhood air readings, water quality and the school route for the address you are considering.',
     'Daily infrastructure':'Try the weekday commute and check internet providers for the specific address before signing a lease.',
     'Faith & community':'Visit the nearby mosque and school on a normal weekday. Ask about women’s facilities, halal suppliers and weekend programmes.'
@@ -105,7 +107,7 @@
     mobileStart=Math.max(0,Math.min(mobileStart,pair.length-2));
     const shown=paged?pair.slice(mobileStart,mobileStart+2):pair;
     const pager=paged?'<div class="pair-pager"><button data-pair-page="-1" '+(mobileStart===0?'disabled':'')+'>Previous</button><span>Countries '+(mobileStart+1)+'–'+(mobileStart+2)+' of '+pair.length+'</span><button data-pair-page="1" '+(mobileStart>=pair.length-2?'disabled':'')+'>Next</button></div>':'';
-    const body=measureRows(shown,visible)+(category==='Faith & community'?compareText(shown):'');
+    const body=(category==='Living costs'?window.FamilyCosts.compare(shown):'')+measureRows(shown,visible)+(category==='Faith & community'?compareText(shown):'');
     $('#detail').innerHTML='<a class="breadcrumb" href="#home">'+icon('left')+'World map</a><div class="compare-heading"><div><h1>Compare family life</h1><p class="subdek">Choose up to four places. Each value includes its observation year.</p></div>'+(pair.length<4?'<button class="btn plain-btn" data-find="add">+ Add a country</button>':'')+'</div>'+
       '<div class="category-tabs" aria-label="Comparison topics" role="group">'+groups.map(g=>'<button data-category="'+escape(g)+'" aria-pressed="'+(category===g)+'">'+escape(g)+'</button>').join('')+'</div>'+
       '<div class="comparison-sheet" style="--n:'+shown.length+'"><div class="family-sticky">'+pager+'<div class="value-grid">'+shown.map(id=>{const i=pair.indexOf(id);
@@ -118,10 +120,10 @@
     const g=guide[c.id],pic=img[c.id],other=c.id==='fr'?'dz':'fr';
     const local=g?'<hr class="section-rule"><div class="profile-content"><div><h2>Daily life in '+escape(g.city)+'</h2><p class="subdek">'+escape(g.intro)+'</p>'+[['prayer','Prayer spaces'],['food','Halal food'],['family','Family & community'],['language','Language']].map(([k,l])=>'<div class="fact-row"><div>'+icon(k)+'</div><div><h3>'+l+'</h3><p>'+escape(g[k])+'</p></div></div>').join('')+'</div><aside><div class="tip"><h3>Before you move</h3><p>'+escape(g.tip)+'</p></div><div class="source-block"><h3>Local sources</h3>'+sources(g)+'</div></aside></div>':'';
     const head='<div><div class="meta-line">'+escape(c.region)+'</div><h1>'+placeName(c)+'</h1><div class="profile-actions"><a class="btn dark" href="#compare/'+c.id+'/'+other+'">'+icon('compare')+'Compare this country</a>'+saveButton(c)+'</div></div>';
-    $('#detail').innerHTML=crumb()+'<article><div class="'+(pic?'profile-hero':'profile-head')+'">'+head+(pic?'<img class="profile-img" src="'+asset('assets/'+pic+'.webp')+'" alt="'+escape(window.PHOTOS[pic].alt)+'">':'')+'</div><div class="profile-stats">'+['share','prices','uhc','dpt'].map(key=>'<div><small>'+escape(names[key])+'</small><b>'+escape(format(c,key,true))+'</b><span>'+escape(measures[key].unit)+' · '+(c.d[key]?.[1]||'No observation')+'</span></div>').join('')+'</div>'+local+'<hr class="section-rule"><h2 class="profile-data-title">National indicators</h2>'+measureRows([c.id],window.MEASURES.map(m=>m.key))+'</article>';
+    $('#detail').innerHTML=crumb()+'<article><div class="'+(pic?'profile-hero':'profile-head')+'">'+head+(pic?'<img class="profile-img" src="'+asset('assets/'+pic+'.webp')+'" alt="'+escape(window.PHOTOS[pic].alt)+'">':'')+'</div><div class="profile-stats">'+['share','prices','uhc','dpt'].map(key=>'<div><small>'+escape(names[key])+'</small><b>'+escape(format(c,key,true))+'</b><span>'+escape(measures[key].unit)+' · '+(c.d[key]?.[1]||'No observation')+'</span></div>').join('')+'</div>'+window.FamilyCosts.profile(c.id,other)+local+'<hr class="section-rule"><h2 class="profile-data-title">National indicators</h2>'+measureRows([c.id],window.MEASURES.map(m=>m.key))+'</article>';
   }
   function renderAbout(){
-    $('#detail').innerHTML='<a class="breadcrumb" href="#home">'+icon('left')+'World map</a><article class="about"><h1>Methods &amp; sources</h1><p>The atlas covers the 201 countries and territories in Pew Research Center’s religious composition dataset. National indicators describe residents as a whole. The 21 city guides use local sources for everyday questions about prayer, food, family and language.</p><h2>Dates and missing data</h2><p>Religious affiliation uses Pew’s 2010 and 2020 estimates, based on censuses, surveys and demographic modelling. Counts are rounded to 10,000 and percentages to one decimal. Upper and lower bounds are kept as published. Rankings include only numeric values.</p><p>Household prices, internet, urban population and life expectancy use 2024. Other family indicators use each country’s most recent observation between 2018 and 2024. Missing observations are shown as “No data.” National averages cannot determine a specific family’s benefits, insurance eligibility or monthly budget.</p><h2>Indicator sources</h2>'+window.MEASURES.map(m=>'<details><summary>'+escape(m.name)+'</summary><p>'+escape(m.description)+'</p><a class="credit-link" href="'+escape(m.url)+'" target="_blank" rel="noopener">'+escape(m.source)+'</a></details>').join('')+
+    $('#detail').innerHTML='<a class="breadcrumb" href="#home">'+icon('left')+'World map</a><article class="about"><h1>Methods &amp; sources</h1><p>The atlas covers the 201 countries and territories in Pew Research Center’s religious composition dataset. National indicators describe residents as a whole. The 21 city guides use local sources for everyday questions about prayer, food, family and language.</p><h2>Dates and missing data</h2><p>Religious affiliation uses Pew’s 2010 and 2020 estimates, based on censuses, surveys and demographic modelling. Counts are rounded to 10,000 and percentages to one decimal. Upper and lower bounds are kept as published. Rankings include only numeric values.</p><p>Household prices, internet, urban population and life expectancy use 2024. Other family indicators use each country’s most recent observation between 2018 and 2024. Missing observations are shown as “No data.” National averages cannot determine a specific family’s benefits, insurance eligibility or monthly budget.</p><h2>Cost of living</h2><p>City budgets and individual prices are estimates from Livingcost.org’s June 2026 release. City budgets cover a family of four. The publisher combines contributed prices and public data to model a consumer basket. All city figures use US dollars. The national healthy-diet series uses the World Bank and FAO’s 2025 estimates in purchasing-power-adjusted international dollars. Local-currency amounts are available for covered city-guide countries.</p><a class="credit-link" href="https://livingcost.org/about" target="_blank" rel="noopener">Livingcost.org methodology</a><h2>Indicator sources</h2>'+window.MEASURES.map(m=>'<details><summary>'+escape(m.name)+'</summary><p>'+escape(m.description)+'</p><a class="credit-link" href="'+escape(m.url)+'" target="_blank" rel="noopener">'+escape(m.source)+'</a></details>').join('')+
       '<h2>Map and city guides</h2><p>The map uses Natural Earth country boundaries in the Equal Earth projection. Small territories can be found through country search. Regions follow Pew’s classification.</p><a class="credit-link" target="_blank" rel="noopener" href="https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/">Natural Earth · Map source</a>'+Object.values(guide).sort((a,b)=>a.name.localeCompare(b.name)).map(g=>'<details><summary>'+escape(g.city)+', '+escape(g.name)+'</summary>'+sources(g)+'</details>').join('')+'<div class="source-block"><a href="photo-credits.html" class="photo-credits">Photography credits and licences</a></div></article>';
   }
   function toggleMenu(open){$('#mobile-nav').hidden=!open;const b=$('.menu-btn');b.setAttribute('aria-expanded',String(open));b.setAttribute('aria-label',open?'Close navigation':'Open navigation');b.innerHTML=icon(open?'close':'menu');}
@@ -129,13 +131,13 @@
     const [part,...tokens]=location.hash.slice(1).split('/');view=['saved','compare','about'].includes(part)?part:part==='country'&&byId[tokens[0]]?'country':'home';
     $('#home').hidden=view!=='home';$('#detail').hidden=view==='home';toggleMenu(false);
     if(view==='compare'){const ids=[...new Set(tokens.filter(id=>byId[id]))].slice(0,4);if(ids.length>=2)pair=ids;
-      const group=tokens.find(t=>t.startsWith('topic-'));if(group){const g=groups.find(g=>slug(g)===group.substring(6));if(g)category=g;}renderCompare();}
+      const group=tokens.find(t=>t.startsWith('topic-'));if(group){const g=group==='topic-costs-work'?'Living costs':groups.find(g=>slug(g)===group.substring(6));if(g)category=g;}renderCompare();}
     if(view==='country')renderProfile(byId[tokens[0]]);
     if(view==='saved')renderSaved();if(view==='about')renderAbout();
-    syncSaved();const page=view==='home'&&part==='atlas'?'atlas':view==='country'?'atlas':view;
+    syncSaved();const page=view==='home'&&['atlas','budget'].includes(part)?part:view==='country'?'atlas':view;
     document.querySelectorAll('.desktop-nav a,.saved-nav').forEach(a=>{if(a.hash==='#'+page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-    document.title=(view==='country'?byId[tokens[0]].name:view==='home'?'Muslim family life around the world':view==='compare'?'Compare family life':view==='saved'?'Saved places':'Methods & sources')+' | Sakinah Atlas';
-    requestAnimationFrame(()=>{if(view==='home'&&['atlas','rankings'].includes(part)){const n=document.getElementById(part);n.scrollIntoView({behavior:'instant'});if(!initial){n.tabIndex=-1;n.focus({preventScroll:true});}}
+    document.title=view==='home'?(part==='budget'?'Living costs | Muslim Family Map':'Muslim Family Map'):(view==='country'?byId[tokens[0]].name:view==='compare'?'Compare family life':view==='saved'?'Saved places':'Methods & sources')+' | Muslim Family Map';
+    requestAnimationFrame(()=>{if(view==='home'&&['atlas','rankings','budget'].includes(part)){const n=document.getElementById(part);n.scrollIntoView({behavior:'instant'});if(!initial){n.tabIndex=-1;n.focus({preventScroll:true});}}
       else if(!initial||location.hash){window.scrollTo({top:0,behavior:'instant'});if(!initial)$('#main').focus({preventScroll:true});}});
   }
   function slug(s){return s.toLowerCase().replace(/[^a-z]+/g,'-').replace(/-$/,'');}
@@ -184,5 +186,5 @@
   [$('#dir-search'),$('#dir-region'),$('#guides-only')].forEach(n=>n.addEventListener('input',()=>{pageSize=12;renderDirectory();}));
   document.querySelectorAll('[data-icon]').forEach(n=>n.innerHTML=icon(n.dataset.icon));
   window.Atlas={list,byId,measures,regions,regionOptions,format,unit,escape,icon,guide};
-  readSaved();renderDirectory();route(true);
+  window.FamilyCosts.mount();readSaved();renderDirectory();route(true);
 })();

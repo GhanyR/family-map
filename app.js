@@ -30,7 +30,8 @@
   const names={people:'Muslim population',share:'Muslim share',prices:'Household price level',uhc:'Health service coverage',dpt:'DPT vaccination',schoolyears:'Compulsory education',teachers:'Pupils per teacher',water:'Safe drinking water',jobs:'Unemployment'};
   const placeName=(c)=>escape(c.name);
   const searchText=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-  const searchable=new Map(list.map(c=>[c.id,searchText([c.name,c.iso2,c.iso3,guide[c.id]?.city,...c.aliases].join(' '))]));
+  const searchable=new Map(list.map(c=>[c.id,searchText([c.name,c.iso2,c.iso3,guide[c.id]?.city,window.CITY_PRICES[c.id]?.city,...c.aliases].join(' '))]));
+  const budgetCities=Object.values(window.CITY_PRICES).sort((a,b)=>a.city.localeCompare(b.city,'en'));
   function match(c,q){return !q || searchable.get(c.id).includes(searchText(q));}
   function format(c,key,compact=false){
     const row=c.d[key],m=measures[key];
@@ -142,18 +143,47 @@
   }
   function slug(s){return s.toLowerCase().replace(/[^a-z]+/g,'-').replace(/-$/,'');}
   function recordPair(){history.replaceState(null,'','#compare/'+pair.join('/')+'/topic-'+slug(category));}
-  function showPicker(action){
+  let pickerTrigger;
+  function fitPicker() {
+    const viewport=window.visualViewport;
+    if(viewport) $('#picker').style.setProperty('--picker-height',Math.round(viewport.height)+'px');
+  }
+  function showPicker(action,trigger){
     pickerAction=action;
-    $('#picker-title').textContent=action==='add'?'Add a country':action.startsWith('pair-')?'Change country':'Find a country';
-    $('#picker-input').value='';renderPicker();$('#picker').showModal();$('#picker-input').focus();
+    pickerTrigger=trigger;
+    const city=action.startsWith('city-');
+    const input=$('#picker-input');
+    $('#picker-title').textContent=city?'Choose a city':action==='add'?'Add a country':action.startsWith('pair-')?'Change country':'Find a country';
+    input.placeholder=city?'Search by city or country':'Search a country, territory or city';
+    input.setAttribute('aria-label',input.placeholder);
+    input.value='';
+    renderPicker();
+    fitPicker();
+    window.visualViewport?.addEventListener('resize',fitPicker);
+    trigger.focus({preventScroll:true});
+    $('#picker').showModal();
+    input.focus({preventScroll:true});
   }
   function renderPicker(){
     const q=$('#picker-input').value;
-    const rows=list.filter(c=>match(c,q)&&(pickerAction!=='add'||!pair.includes(c.id)));
-    $('#picker-list').innerHTML=rows.length?rows.map(c=>'<button data-picked="'+c.id+'"><b>'+placeName(c)+'</b><small>'+escape(c.region)+'</small></button>').join(''):'<p class="no-results">No places match your search.</p>';
+    const city=pickerAction.startsWith('city-');
+    const rows=city
+      ? budgetCities.filter(c=>match(byId[c.id],q)).map(c=>({id:c.id,label:c.city,detail:byId[c.id].name}))
+      : list.filter(c=>match(c,q)&&(pickerAction!=='add'||!pair.includes(c.id))).map(c=>({id:c.id,label:c.name,detail:c.region}));
+    const results=$('#picker-list');
+    results.innerHTML=rows.length?rows.map(row=>{
+      const current=city && row.id===pickerTrigger.dataset.cityId;
+      return '<button type="button" data-picked="'+row.id+'"'+(current?' aria-current="true"':'')+'><b>'+escape(row.label)+'</b><small>'+escape(row.detail)+'</small>'+(current?icon('check'):'')+'</button>';
+    }).join(''):'<p class="no-results">'+(city?'No cities found. Try a city or country name.':'No places match your search.')+'</p>';
+    results.scrollTop=0;
+    $('#picker-count').textContent=rows.length+' '+(rows.length===1?'result':'results');
   }
   function pick(id){
     const action=pickerAction;$('#picker').close();
+    if(action.startsWith('city-')){
+      window.FamilyCosts.changeCity(Number(action.slice(5)),id);
+      return;
+    }
     if(action==='profile'){location.hash='country/'+id;return;}
     if(action==='map'){window.dispatchEvent(new CustomEvent('atlas:place',{detail:id}));return;}
     if(action==='add'&&!pair.includes(id)&&pair.length<4){pair.push(id);mobileStart=pair.length-2;}
@@ -164,7 +194,7 @@
     const b=e.target.closest('button');
     if(!$('#mobile-nav').hidden&&!e.composedPath().includes($('.mast')))toggleMenu(false);
     if(b?.matches('.menu-btn'))toggleMenu($('#mobile-nav').hidden);
-    else if(b?.dataset.find)showPicker(b.dataset.find);
+    else if(b?.dataset.find)showPicker(b.dataset.find,b);
     else if(b?.dataset.picked)pick(b.dataset.picked);
     else if(b?.dataset.save)save(b.dataset.save);
     else if(b?.dataset.pairPage){mobileStart+=Number(b.dataset.pairPage);renderCompare();}
@@ -175,8 +205,15 @@
     if(e.target===$('#picker')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}
     const a=e.target.closest('a');if(a?.getAttribute('href')?.startsWith('#')&&a.hash===location.hash){e.preventDefault();route();}
   });
+  $('#picker').addEventListener('close',()=>{if(!$('#picker').open)window.visualViewport?.removeEventListener('resize',fitPicker);});
+  $('#picker').addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&!event.isComposing){
+      event.preventDefault();
+      $('#picker').close();
+    }
+  });
   $('#picker-input').addEventListener('input',renderPicker);
-  $('#picker-input').addEventListener('keydown',e=>{if(['ArrowDown','Enter'].includes(e.key)){e.preventDefault();const first=$('#picker-list button');if(e.key==='Enter')first?.click();else first?.focus();}});
+  $('#picker-input').addEventListener('keydown',e=>{if(!e.isComposing&&['ArrowDown','Enter'].includes(e.key)){e.preventDefault();const first=$('#picker-list button');if(e.key==='Enter')first?.click();else first?.focus();}});
   $('#picker-list').addEventListener('keydown',e=>{const b=e.target.closest('button');if(!b)return;if(e.key==='ArrowDown'){e.preventDefault();b.nextElementSibling?.focus();}if(e.key==='ArrowUp'){e.preventDefault();(b.previousElementSibling||$('#picker-input')).focus();}});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#mobile-nav').hidden){toggleMenu(false);$('.menu-btn').focus();}});
   matchMedia('(max-width:680px)').addEventListener('change',()=>{if(view==='compare')renderCompare();});

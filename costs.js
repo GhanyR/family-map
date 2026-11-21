@@ -3,7 +3,6 @@
 
   const cities = window.CITY_PRICES;
   const countries = new Map(window.WORLD.map(country => [country.id, country]));
-  const choices = Object.values(cities).sort((a, b) => a.city.localeCompare(b.city, 'en'));
   const rows = [
     ['total', 'Family budget', 'Family of four · month, including rent'],
     ['rent', 'Rent & utilities', 'Family of four · month'],
@@ -50,17 +49,15 @@
       metric = event.target.value;
       drawChart();
     });
-    panel.querySelector('#cost-chart-rows').addEventListener('change', event => {
-      const select = event.target.closest('select[data-city-slot]');
-      if (!select) return;
-      const index = Number(select.dataset.citySlot);
-      const oldPosition = selections.indexOf(select.value);
-      if (oldPosition >= 0) selections[oldPosition] = selections[index];
-      selections[index] = select.value;
-      drawChart();
-      panel.querySelector('[data-city-slot="'+index+'"]').focus({preventScroll:true});
-    });
     drawChart();
+  }
+
+  function changeCity(index, id) {
+    const previous = selections.indexOf(id);
+    if (previous >= 0) selections[previous] = selections[index];
+    selections[index] = id;
+    drawChart();
+    document.querySelector('[data-find="city-'+index+'"]').focus({preventScroll:true});
   }
 
   function drawChart() {
@@ -83,8 +80,8 @@
     document.getElementById('cost-chart-rows').innerHTML = selected.map((city, index) => {
       const value = city[metric];
       const segments = monthly ? [city.rent,city.food,city.transport,Math.max(0,value-city.rent-city.food-city.transport)] : [value];
-      const options = choices.map(c => '<option value="'+c.id+'"'+(c.id===city.id?' selected':'')+'>'+esc(c.city)+'</option>').join('');
-      return '<div class="cost-bar-row"><div class="cost-bar-head"><select data-city-slot="'+index+'" aria-label="City '+(index+1)+'">'+options+'</select><strong>'+ (value==null?'No data':money(value,metric))+'</strong></div><div class="cost-track" aria-hidden="true">'+segments.map((v,i) => '<i class="seg-'+i+'" style="width:'+(100*v/largest).toFixed(3)+'%"></i>').join('')+'</div></div>';
+      const trigger = '<button type="button" class="city-trigger" data-find="city-'+index+'" data-city-id="'+city.id+'" aria-haspopup="dialog" aria-controls="picker" aria-label="Change city '+(index+1)+', '+esc(city.city)+'">'+esc(city.city)+window.Atlas.icon('down')+'</button>';
+      return '<div class="cost-bar-row"><div class="cost-bar-head">'+trigger+'<strong>'+ (value==null?'No data':money(value,metric))+'</strong></div><div class="cost-track" aria-hidden="true">'+segments.map((v,i) => '<i class="seg-'+i+'" style="width:'+(100*v/largest).toFixed(3)+'%"></i>').join('')+'</div></div>';
     }).join('');
     document.getElementById('cost-source').innerHTML = 'Livingcost.org estimates · '+[...new Set(selected.map(date))].join(' / ')+'<br>'+selected.map(sourceLink).join(' &nbsp; ');
     document.getElementById('cost-compare').href = comparison(selections);
@@ -107,5 +104,5 @@
     return '<section class="profile-budget"><div><h2>Living costs in '+esc(city.city)+'</h2><p>Family of four · estimated monthly budget in USD · '+date(city)+'</p></div><strong>'+money(city.total,'total')+'</strong><div><a class="budget-link" href="'+comparison([id,other])+'">Compare rent, food and childcare →</a></div><div class="budget-source">'+sourceLink(city)+'</div></section>';
   }
 
-  window.FamilyCosts = {mount, compare, profile};
+  window.FamilyCosts = {mount, compare, profile, changeCity};
 })();

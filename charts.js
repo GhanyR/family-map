@@ -10,11 +10,11 @@
     prices:['#294641','#446e60','#719481','#9ab2a2','#d1c393','#e4a976']
   };
   const modes={
-    share:{label:'Muslim share',title:'Muslim share of the population',bins:[1,10,50,75,95],legend:['<1%','1–<10%','10–<50%','50–<75%','75–<95%','95%+'],source:'Pew Research Center',note:'Share of residents identifying as Muslim · 2020'},
+    prices:{label:'Household prices',title:'Household price levels',bins:[30,45,60,75,100],legend:['<30','30–<45','45–<60','60–<75','75–<100','100+'],source:'World Bank',note:'Household consumption price level · U.S. = 100 · 2024'},
     uhc:{label:'Healthcare',title:'Coverage of essential health services',bins:[40,50,60,70,80],legend:['<40','40–<50','50–<60','60–<70','70–<80','80+'],source:'WHO & World Bank',note:'UHC service coverage index · 0–100 · latest available, 2018–2024'},
-    prices:{label:'Household prices',title:'Household price levels',bins:[30,45,60,75,100],legend:['<30','30–<45','45–<60','60–<75','75–<100','100+'],source:'World Bank',note:'Household consumption price level · U.S. = 100 · 2024'}
+    share:{label:'Muslim share',title:'Muslim share of the population',bins:[1,10,50,75,95],legend:['<1%','1–<10%','10–<50%','50–<75%','75–<95%','95%+'],source:'Pew Research Center',note:'Share of residents identifying as Muslim · 2020'}
   };
-  let mode='share',selected=null,rankPage=0;
+  let mode='prices',selected=null,rankPage=0;
   const svg=$('#map-svg');
   function numeric(c,key){
     const row=c?.d[key];if(!row)return null;
@@ -79,7 +79,7 @@
   svg.addEventListener('pointerleave',()=>$('#map-hint').hidden=true);
   window.addEventListener('atlas:place',e=>selectPlace(e.detail));
   const metricPicker=$('#rank-metric');
-  metricPicker.innerHTML=window.MEASURES.map(m=>'<option value="'+m.key+'">'+escape(m.name)+'</option>').join('');metricPicker.value='people';
+  metricPicker.innerHTML=window.MEASURES.map(m=>'<option value="'+m.key+'">'+escape(m.name)+'</option>').join('');metricPicker.value='prices';
   $('#rank-region').innerHTML=regionOptions;
   function drawRanking(){
     const key=metricPicker.value,region=$('#rank-region').value,desc=$('#rank-order').value==='desc',m=measures[key];

@@ -30,7 +30,22 @@
 
   function mount() {
     const panel = document.getElementById('budget');
-    panel.innerHTML = '<div class="budget-intro"><h2 id="budget-heading">What does family life cost?</h2><p>Compare a month’s budget for a family of four, or check the price of an everyday purchase.</p><label for="cost-metric">Compare prices</label><select id="cost-metric">'+rows.filter(([key]) => homeMetrics.includes(key)).map(([key,title,unit]) => '<option value="'+key+'">'+esc(title)+(key==='total'?' · monthly':' · '+esc(unit.split(' · ').pop()))+'</option>').join('')+'</select></div><div class="budget-chart"><div class="budget-chart-title"><h3 id="cost-title"></h3><span>USD</span></div><div id="cost-chart-rows"></div><div class="budget-legend" id="cost-legend"><span><i></i>Housing &amp; utilities</span><span><i></i>Food</span><span><i></i>Transport</span><span><i></i>Other</span></div><div class="budget-source" id="cost-source"></div><a class="budget-link" id="cost-compare">Compare these cities <span aria-hidden="true">→</span></a></div>';
+    const options = rows.filter(([key]) => homeMetrics.includes(key)).map(([key,title]) =>
+      '<option value="'+key+'">'+esc(title)+'</option>').join('');
+    panel.innerHTML = `
+      <div class="budget-intro">
+        <div class="edition-date"><b>Cost of living</b><time datetime="2026-06">June 2026</time></div>
+        <h1 id="budget-heading"></h1>
+        <a class="story-more" href="#compare">Compare countries <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="budget-chart">
+        <div class="cost-controls"><label class="sr" for="cost-metric">Compare prices</label><select id="cost-metric">${options}</select><span>USD</span></div>
+        <h2 id="cost-title"></h2>
+        <div id="cost-chart-rows"></div>
+        <div class="budget-legend" id="cost-legend"><span><i></i>Housing &amp; utilities</span><span><i></i>Food</span><span><i></i>Transport</span><span><i></i>Other</span></div>
+        <div class="budget-source" id="cost-source"></div>
+        <a class="budget-link" id="cost-compare">Compare these cities <span aria-hidden="true">→</span></a>
+      </div>`;
     panel.querySelector('#cost-metric').addEventListener('change', event => {
       metric = event.target.value;
       drawChart();
@@ -53,7 +68,17 @@
     const largest = Math.max(...selected.map(city => city[metric] || 0), 0.01);
     const monthly = metric==='total';
     const [,title,unit] = rows.find(([key])=>key===metric);
-    document.getElementById('cost-title').textContent = monthly ? 'Monthly family budget' : title+' · '+unit;
+    const subjects = {
+      total:'A month for four costs', rent:'Monthly rent and utilities for four cost', food:'A month of food for four costs',
+      preschool:'A month of preschool costs', milk:'A litre of milk costs', rice:'A kilo of rice costs',
+      eggs:'A dozen eggs cost', fare:'A local transport ticket costs'
+    };
+    const ordered = selected.filter(city => city[metric]!=null).sort((a,b) => a[metric]-b[metric]);
+    const first = ordered[0], last = ordered[ordered.length-1];
+    document.getElementById('budget-heading').textContent = first && first!==last
+      ? subjects[metric]+' '+money(first[metric],metric)+' in '+first.city+' and '+money(last[metric],metric)+' in '+last.city+'.'
+      : title+' in the selected cities';
+    document.getElementById('cost-title').textContent = monthly ? 'Monthly estimate for a family of four, including rent' : title+' · '+unit;
     document.getElementById('cost-legend').hidden = !monthly;
     document.getElementById('cost-chart-rows').innerHTML = selected.map((city, index) => {
       const value = city[metric];

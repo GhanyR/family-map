@@ -229,3 +229,21 @@ select:not(.select-wrap select){max-width:100%;min-height:36px;border:1px solid 
 .lead-costs{color:#234f45;font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;min-height:44px}
 @media(min-width:741px){.lead-links{justify-content:flex-end}}
 @media(max-width:740px){.lead-links{margin-top:9px}.lead .lead-links .btn{margin-top:0}.lead-costs{font-size:13px}}
+
+@font-face{font-family:InstrumentSerif;src:url(assets/instrument-serif.woff) format("woff");font-style:normal;font-weight:400;font-display:swap}
+.mast .wordmark{min-height:44px;min-width:44px;justify-content:center}
+.mast .wordmark img{width:34px;height:34px}
+.budget-feature{grid-template-columns:minmax(0,1.1fr) minmax(0,.95fr);align-items:center;gap:clamp(30px,5.7vw,85px);padding:clamp(28px,3.6vw,52px) 0;margin:0 0 24px;border:0;border-bottom:1px solid #a5afa8;border-radius:0;background:transparent}
+.edition-date{display:flex;align-items:center;gap:12px;color:#405c50;font-size:12px;line-height:1.3}
+.edition-date b{text-transform:uppercase;letter-spacing:.09em;font-weight:600}
+.edition-date time{padding-left:12px;border-left:1px solid #93a198}
+#budget-heading{font:400 clamp(51px,5.6vw,82px)/.99 InstrumentSerif,Georgia,serif;letter-spacing:-.026em;color:#182c27;text-wrap:balance;margin:20px 0}
+.story-more{display:inline-flex;gap:12px;align-items:center;min-height:44px;border-top:1px solid var(--ink);font-weight:600;font-size:14px}
+.budget-chart{padding:17px 21px 11px;background:#f1f1e9;border-top:2px solid #31574b}
+.cost-controls{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cost-controls span{font-size:12px;font-weight:600;color:#4c5e55}
+.budget-feature #cost-metric{font:600 17px DM,Arial,sans-serif;border:0;min-height:40px;padding:0 3px 0 0;max-width:86%;background-color:transparent}
+.budget-feature #cost-title{font:400 13px/1.4 DM,Arial,sans-serif;letter-spacing:0;color:#485c51;margin:0 0 4px;max-width:100%}
+.budget-chart .cost-bar-head select{background:transparent;border:0;border-radius:0;padding-left:0;min-height:40px}
+.budget-source a,.budget-link{color:#285748}
+@media(max-width:740px){.budget-feature{display:block;padding:23px 0 17px;margin-bottom:18px}.edition-date{font-size:11px}#budget-heading{font-size:clamp(42px,10vw,61px);line-height:1.01;max-width:19ch;margin:12px 0}.story-more{font-size:13px;border-top:0;min-height:44px}.budget-chart{margin-top:8px;padding:9px 14px 7px}.budget-legend{font-size:11px}.budget-chart .cost-bar-head select{min-height:44px}#worldstage{scroll-margin-top:10px}}
